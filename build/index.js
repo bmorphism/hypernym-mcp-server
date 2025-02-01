@@ -9,16 +9,10 @@ const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const types_js_1 = require("@modelcontextprotocol/sdk/types.js");
 const axios_1 = __importDefault(require("axios"));
 const API_KEY = process.env.HYPERNYM_API_KEY;
-const INCLUDE_RAW_INFO = process.env.HYPERNYM_INCLUDE_RAW_INFO === 'true';
 if (!API_KEY) {
     throw new Error('HYPERNYM_API_KEY environment variable is required');
 }
 const isValidAnalyzeTextArgs = (args) => typeof args === 'object' &&
-    args !== null &&
-    typeof args.text === 'string' &&
-    (args.minCompressionRatio === undefined || typeof args.minCompressionRatio === 'number') &&
-    (args.minSemanticSimilarity === undefined || typeof args.minSemanticSimilarity === 'number');
-const isValidSemanticCompressionArgs = (args) => typeof args === 'object' &&
     args !== null &&
     typeof args.text === 'string' &&
     (args.minCompressionRatio === undefined || typeof args.minCompressionRatio === 'number') &&
@@ -34,28 +28,11 @@ class HypernymServer {
             },
         });
         this.axiosInstance = axios_1.default.create({
-            baseURL: 'https://fc-api-development.hypernym.ai',
+            baseURL: 'https://fc_api_backend.hypernym.ai',
             headers: {
                 'X-API-Key': API_KEY,
                 'Content-Type': 'application/json',
             },
-            timeout: 120000, // 2 minute timeout
-        });
-        // Add response interceptor for rate limiting
-        this.axiosInstance.interceptors.response.use(response => response, async (error) => {
-            if (axios_1.default.isAxiosError(error) && error.response?.status === 429) {
-                // Get retry delay from headers or use default
-                const retryAfter = parseInt(error.response.headers['retry-after'] || '5', 10);
-                console.error(`Rate limited. Retrying after ${retryAfter} seconds...`);
-                // Wait for the specified time
-                await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-                // Retry the request
-                if (error.config) {
-                    return this.axiosInstance.request(error.config);
-                }
-                return Promise.reject(error);
-            }
-            return Promise.reject(error);
         });
         this.setupToolHandlers();
         // Error handling
@@ -124,7 +101,7 @@ class HypernymServer {
         }));
         this.server.setRequestHandler(types_js_1.CallToolRequestSchema, async (request) => {
             switch (request.params.name) {
-                case 'analyze_text': {
+                case 'analyze_text':
                     if (!isValidAnalyzeTextArgs(request.params.arguments)) {
                         throw new types_js_1.McpError(types_js_1.ErrorCode.InvalidParams, 'Invalid analyze_text arguments');
                     }
@@ -135,16 +112,12 @@ class HypernymServer {
                                 min_compression_ratio: request.params.arguments.minCompressionRatio ?? 0.5,
                                 min_semantic_similarity: request.params.arguments.minSemanticSimilarity ?? 0.8,
                             },
-                        }, {
-                            timeout: 120000, // 2 minute timeout for this specific request
                         });
                         return {
                             content: [
                                 {
                                     type: 'text',
-                                    text: INCLUDE_RAW_INFO
-                                        ? JSON.stringify(response.data, null, 2)
-                                        : response.data.results.response.texts.suggested,
+                                    text: JSON.stringify(response.data, null, 2),
                                 },
                             ],
                         };
@@ -163,9 +136,8 @@ class HypernymServer {
                         }
                         throw error;
                     }
-                }
-                case 'semantic_compression': {
-                    if (!isValidSemanticCompressionArgs(request.params.arguments)) {
+                case 'semantic_compression':
+                    if (!isValidAnalyzeTextArgs(request.params.arguments)) {
                         throw new types_js_1.McpError(types_js_1.ErrorCode.InvalidParams, 'Invalid semantic_compression arguments');
                     }
                     try {
@@ -175,14 +147,12 @@ class HypernymServer {
                                 min_compression_ratio: request.params.arguments.minCompressionRatio ?? 0.5,
                                 min_semantic_similarity: request.params.arguments.minSemanticSimilarity ?? 0.8,
                             },
-                        }, {
-                            timeout: 120000, // 2 minute timeout for this specific request
                         });
                         return {
                             content: [
                                 {
                                     type: 'text',
-                                    text: response.data.results.response.texts.suggested,
+                                    text: response.data.response.texts.suggested,
                                 },
                             ],
                         };
@@ -201,7 +171,6 @@ class HypernymServer {
                         }
                         throw error;
                     }
-                }
                 default:
                     throw new types_js_1.McpError(types_js_1.ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
             }
