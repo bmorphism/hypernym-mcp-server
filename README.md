@@ -176,7 +176,7 @@ npm run test:analyze-mcp
 {
   "jsonrpc": "2.0",
   "id": "1",
-  "method": "listTools"
+  "method": "tools/list"
 }
 ```
 
@@ -186,7 +186,7 @@ npm run test:analyze-mcp
 {
   "jsonrpc": "2.0",
   "id": "2", 
-  "method": "callTool",
+  "method": "tools/call",
   "params": {
     "name": "semantic_compression",
     "arguments": {
