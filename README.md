@@ -38,10 +38,11 @@ Hypernym AI offers advanced semantic analysis tools that can:
    touch .env
    ```
 
-4. Add your Hypernym API key to the `.env` file:
+4. Add your Hypernym API key and URL to the `.env` file:
    ```
+   HYPERNYM_API_URL=https://fc-api-development.hypernym.ai
    HYPERNYM_API_KEY=your_api_key_here
-   PORT=3022
+   PORT=3000
    ```
 
 ## Setting up HTTPS (recommended for production)
@@ -72,7 +73,7 @@ SSL_CERT_PATH=/path/to/your/server.crt
    ```bash
    npm start
    ```
-   The server will start on port 3022 by default (or the port specified in your `.env` file).
+   The server will start on port 3000 by default (or the port specified in your `.env` file).
 
    b. stdio transport mode (for MCP integration):
    ```bash
@@ -115,8 +116,9 @@ Only the compressed text that preserves core meaning while maintaining readabili
 
 ## Environment Variables
 
+- `HYPERNYM_API_URL` (required): URL for the Hypernym API (default: https://fc-api-development.hypernym.ai)
 - `HYPERNYM_API_KEY` (required): Your Hypernym AI API key
-- `PORT` (optional): Port to run the server on (default: 3022)
+- `PORT` (optional): Port to run the server on (default: 3000)
 - `SSL_KEY_PATH` (optional): Path to SSL key file
 - `SSL_CERT_PATH` (optional): Path to SSL certificate file
 - `MCP_USE_STDIO` (optional): Set to 'true' to force stdio transport mode
