@@ -14,7 +14,7 @@
     "test:mcp": "node --loader ts-node/esm test/test_mcp.js",
     "test:semantic": "node --loader ts-node/esm test/test_mcp.js semantic_compression",
     "test:analyze-mcp": "node --loader ts-node/esm test/test_mcp.js analyze_text",
-    "test:stdio": "(sleep 1 && echo '{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"listTools\"}') | npm run start:stdio",
+    "test:stdio": "(sleep 1 && echo '{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"tools/list\"}') | npm run start:stdio",
     "test:stdio-full": "node --loader ts-node/esm test/test_stdio.js"
   },
   "keywords": [],
