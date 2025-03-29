@@ -318,13 +318,21 @@ class HypernymServer {
 
               console.log('Successfully received response from Hypernym API');
               
-              // For the analyze_text tool, return the full analysis
-              // Make sure we're returning properly formatted JSON
+              // Enhanced logging - log the full response structure
+              console.log('API Response structure:', JSON.stringify(response.data, null, 2).substring(0, 500) + '...');
+              
+              // For the analyze_text tool, return the full analysis with added metadata
+              // Make sure we're returning properly formatted JSON with success status
               return {
                 content: [
                   {
                     type: 'text',
-                    text: JSON.stringify(response.data, null, 2),
+                    text: JSON.stringify({
+                      ...response.data,
+                      success: true,
+                      status: response.status,
+                      message: "Successfully analyzed text"
+                    }, null, 2),
                   },
                 ],
               };
@@ -388,21 +396,34 @@ class HypernymServer {
               // Make sure we handle potential API response structure changes gracefully
               let compressedText = '';
               
+              // Enhanced logging - log the full response structure
+              console.log('API Response structure:', JSON.stringify(response.data, null, 2).substring(0, 500) + '...');
+              
               if (response.data && response.data.results && response.data.results.response && response.data.results.response.texts) {
                 compressedText = response.data.results.response.texts.suggested || response.data.results.response.texts.compressed || '';
+                
+                // Include detailed response information for debugging
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: JSON.stringify({
+                        compressed_text: compressedText,
+                        success: true,
+                        metrics: {
+                          compression_ratio: response.data.results.response.metrics?.compression_ratio,
+                          semantic_similarity: response.data.results.response.metrics?.semantic_similarity
+                        },
+                        status: response.status,
+                        message: "Successfully compressed text"
+                      }, null, 2)
+                    },
+                  ],
+                };
               } else {
                 console.warn('Unexpected API response structure:', JSON.stringify(response.data).substring(0, 200) + '...');
                 throw new Error('Unexpected API response structure');
               }
-
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: compressedText,
-                  },
-                ],
-              };
             } catch (error) {
               console.error('Error in semantic_compression tool:', error);
               
