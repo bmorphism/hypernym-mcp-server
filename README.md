@@ -67,11 +67,18 @@ SSL_CERT_PATH=/path/to/your/server.crt
    ```
 
 2. Start the server:
+
+   a. HTTP/HTTPS mode:
    ```bash
    npm start
    ```
+   The server will start on port 3022 by default (or the port specified in your `.env` file).
 
-The server will start on port 3022 by default (or the port specified in your `.env` file).
+   b. stdio transport mode (for MCP integration):
+   ```bash
+   npm run start:stdio
+   ```
+   This is the mode you should use when configuring the server in a `.mcp.json` file.
 
 ## MCP Tools
 
@@ -112,6 +119,26 @@ Only the compressed text that preserves core meaning while maintaining readabili
 - `PORT` (optional): Port to run the server on (default: 3022)
 - `SSL_KEY_PATH` (optional): Path to SSL key file
 - `SSL_CERT_PATH` (optional): Path to SSL certificate file
+- `MCP_USE_STDIO` (optional): Set to 'true' to force stdio transport mode
+
+## MCP Integration
+
+To use this server with MCP-compatible AI platforms, add the following configuration to your `.mcp.json` file:
+
+```json
+{
+  "mcpServers": {
+    "hypernym": {
+      "type": "stdio",
+      "command": "cd /path/to/hypernym-mcp-server && npm run start:stdio",
+      "description": "Hypernym semantic analysis and compression tool",
+      "tools": ["analyze_text", "semantic_compression"]
+    }
+  }
+}
+```
+
+This allows AI models to access Hypernym's capabilities through MCP's standardized tool interface.
 
 ## HTTP Endpoints
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   CallToolRequestSchema,
   ErrorCode,
@@ -15,13 +16,16 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // Create axios instance with retry logic
-const createAxiosInstance = (apiKey: string | undefined) => {
+const createAxiosInstance = (baseUrl: string | undefined, apiKey: string | undefined) => {
+  if (!baseUrl) {
+    throw new Error('Base URL is required');
+  }
   if (!apiKey) {
     throw new Error('API key is required');
   }
   
   const instance = axios.create({
-    baseURL: 'https://fc-api-development.hypernym.ai',
+    baseURL: baseUrl,
     headers: {
       'X-API-Key': apiKey,
       'Content-Type': 'application/json',
@@ -135,10 +139,19 @@ const createAxiosInstance = (apiKey: string | undefined) => {
 
 dotenv.config();
 
+const BASE_URL = process.env.HYPERNYM_API_URL;
+if (!BASE_URL) {
+  throw new Error('HYPERNYM_API_URL environment variable is required');
+}
+
 const API_KEY = process.env.HYPERNYM_API_KEY;
 if (!API_KEY) {
   throw new Error('HYPERNYM_API_KEY environment variable is required');
 }
+
+console.log('Hypernym MCP server starting...');
+console.log('Base URL:', BASE_URL);
+console.log('API Key:', API_KEY.toString().substring(0, 1) + '*****' + API_KEY.toString().slice(-1));
 
 interface AnalyzeTextArgs {
   text: string;
@@ -167,18 +180,33 @@ class HypernymServer {
       },
       {
         capabilities: {
-          tools: {},
+          tools: {
+            analyze_text: {
+              description: 'Analyze text using Hypernym AI for semantic categorization and compression'
+            },
+            semantic_compression: {
+              description: 'Get compressed version of text using Hypernym AI'
+            }
+          },
         },
       }
     );
 
     // Use the createAxiosInstance factory with retry logic
-    this.axiosInstance = createAxiosInstance(API_KEY);
+    this.axiosInstance = createAxiosInstance(BASE_URL, API_KEY);
 
     this.setupToolHandlers();
     
     // Error handling
-    this.server.onerror = (error) => console.error('[MCP Error]', error);
+    this.server.onerror = (error) => {
+      console.error('[MCP Error]', error);
+      // Log additional details for debugging
+      if (error instanceof Error) {
+        console.error('[Stack]', error.stack);
+      }
+    };
+    
+    // Handle graceful shutdown
     process.on('SIGINT', async () => {
       await this.server.close();
       if (this.httpServer) {
@@ -186,6 +214,9 @@ class HypernymServer {
       }
       process.exit(0);
     });
+    
+    // Log server initialization for debugging
+    console.log('Server initialized with MCP handlers configured');
 
     // Setup Express
     this.app = express();
@@ -193,7 +224,9 @@ class HypernymServer {
   }
 
   private setupToolHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    // Register the listTools handler - both the standard and lowercase versions
+    // This ensures compatibility with different MCP clients
+    const toolsList = {
       tools: [
         {
           name: 'analyze_text',
@@ -252,7 +285,14 @@ class HypernymServer {
           },
         },
       ],
-    }));
+    };
+    
+    // Register the standard handler using the SDK schema
+    // The correct method name according to MCP SDK is "tools/list"
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      console.log('Handling tools/list request');
+      return toolsList;
+    });
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       try {
@@ -714,8 +754,9 @@ class HypernymServer {
         
         try {
           // Create a custom instance for this request if a different API key is provided
+          const baseUrl = process.env.HYPERNYM_API_URL;
           const instance = req.headers['x-api-key'] !== process.env.HYPERNYM_API_KEY
-            ? createAxiosInstance(apiKey)
+            ? createAxiosInstance(baseUrl, apiKey)
             : self.axiosInstance;
           
           const response = await instance.post('/analyze_sync', {
@@ -775,34 +816,65 @@ class HypernymServer {
   }
 
   async run() {
-    // Setup Express routes without stdio transport
-    this.setupExpressRoutes();
-    const port = parseInt(process.env.PORT || '3022', 10);
+    // Determine transport type from command-line arguments
+    const useStdio = process.argv.includes('--stdio') || process.env.MCP_USE_STDIO === 'true';
     
-    // Check if SSL certificates are available
-    const sslKeyPath = process.env.SSL_KEY_PATH;
-    const sslCertPath = process.env.SSL_CERT_PATH;
-    
-    if (sslKeyPath && sslCertPath) {
+    if (useStdio) {
+      // Setup stdio transport
+      console.error('Starting Hypernym MCP server with stdio transport...');
+      
+      // Enhanced error handling for debugging
+      this.server.onerror = (error) => {
+        console.error('[MCP Error]', error);
+        // Ensure errors don't silently fail
+        if (error instanceof Error) {
+          console.error('[Stack]', error.stack);
+        }
+      };
+      
+      const transport = new StdioServerTransport();
+      
+      // Add custom handlers for transport-level events
+      transport.onclose = () => console.error('[Transport] Connection closed');
+      
       try {
-        // Load SSL certificates
-        const privateKey = fs.readFileSync(sslKeyPath, 'utf8');
-        const certificate = fs.readFileSync(sslCertPath, 'utf8');
-        const credentials = { key: privateKey, cert: certificate };
-        
-        // Start HTTPS server
-        this.httpServer = new HttpsServer(credentials, this.app);
-        this.httpServer.listen(port, () => {
-          console.log(`Hypernym MCP server running on https://localhost:${port}`);
-        });
+        await this.server.connect(transport);
+        console.error('Hypernym MCP server running with stdio transport');
+        console.error('Ready to receive JSON-RPC requests...');
       } catch (error) {
-        console.error('Failed to start HTTPS server:', error);
-        console.log('Falling back to HTTP server...');
-        this.startHttpServer(port);
+        console.error('[FATAL] Failed to initialize stdio transport:', error);
+        process.exit(1);
       }
     } else {
-      // Start HTTP server
-      this.startHttpServer(port);
+      // Setup HTTP/HTTPS server
+      this.setupExpressRoutes();
+      const port = parseInt(process.env.PORT || '3022', 10);
+      
+      // Check if SSL certificates are available
+      const sslKeyPath = process.env.SSL_KEY_PATH;
+      const sslCertPath = process.env.SSL_CERT_PATH;
+      
+      if (sslKeyPath && sslCertPath) {
+        try {
+          // Load SSL certificates
+          const privateKey = fs.readFileSync(sslKeyPath, 'utf8');
+          const certificate = fs.readFileSync(sslCertPath, 'utf8');
+          const credentials = { key: privateKey, cert: certificate };
+          
+          // Start HTTPS server
+          this.httpServer = new HttpsServer(credentials, this.app);
+          this.httpServer.listen(port, () => {
+            console.log(`Hypernym MCP server running on https://localhost:${port}`);
+          });
+        } catch (error) {
+          console.error('Failed to start HTTPS server:', error);
+          console.log('Falling back to HTTP server...');
+          this.startHttpServer(port);
+        }
+      } else {
+        // Start HTTP server
+        this.startHttpServer(port);
+      }
     }
   }
   
