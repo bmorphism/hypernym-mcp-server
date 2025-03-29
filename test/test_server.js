@@ -4,13 +4,30 @@ import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import fs from 'fs';
 
+// Import fetch for Node.js environments that don't have it natively
+let fetch;
+try {
+  // For Node.js >=18
+  fetch = globalThis.fetch;
+} catch (e) {
+  try {
+    // For Node.js <18, use node-fetch
+    const nodeFetch = await import('node-fetch');
+    fetch = nodeFetch.default;
+  } catch (err) {
+    console.error('Error: fetch is not available. For Node.js <18, install node-fetch:');
+    console.error('npm install node-fetch');
+    process.exit(1);
+  }
+}
+
 // Load environment variables from .env file
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: resolve(__dirname, '../.env') });
 
-// Get port from environment variables or default to 3000
-const PORT = process.env.PORT || 3000;
+// Get port from environment variables or default to 3022
+const PORT = process.env.PORT || 3022;
 const PROTOCOL = process.env.SSL_KEY_PATH && process.env.SSL_CERT_PATH ? 'https' : 'http';
 const ENDPOINT = process.argv[2] || 'health';
 
@@ -33,6 +50,21 @@ if (ENDPOINT !== 'health') {
       params: {
         min_compression_ratio: 0.5,
         min_semantic_similarity: 0.8
+      }
+    });
+  } else if (ENDPOINT === 'semantic_compression') {
+    // For MCP tool testing
+    options.body = JSON.stringify({
+      jsonrpc: "2.0", 
+      id: "1", 
+      method: "callTool",
+      params: {
+        name: "semantic_compression",
+        arguments: {
+          text: sampleText,
+          min_compression_ratio: 0.5,
+          min_semantic_similarity: 0.8
+        }
       }
     });
   }

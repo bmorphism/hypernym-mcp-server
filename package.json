@@ -9,7 +9,10 @@
     "test:compression": "node --loader ts-node/esm test/test_compression.ts",
     "generate-certs": "cd ssl && ./generate-certs.sh",
     "test:server": "node --loader ts-node/esm test/test_server.js",
-    "test:analyze": "node --loader ts-node/esm test/test_server.js analyze_sync"
+    "test:analyze": "node --loader ts-node/esm test/test_server.js analyze_sync",
+    "test:mcp": "node --loader ts-node/esm test/test_mcp.js",
+    "test:semantic": "node --loader ts-node/esm test/test_mcp.js semantic_compression",
+    "test:analyze-mcp": "node --loader ts-node/esm test/test_mcp.js analyze_text"
   },
   "keywords": [],
   "author": "",
@@ -24,6 +27,7 @@
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^22.13.0",
+    "node-fetch": "^3.3.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   }
