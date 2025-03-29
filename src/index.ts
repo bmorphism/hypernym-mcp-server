@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   CallToolRequestSchema,
   ErrorCode,
@@ -776,13 +775,9 @@ class HypernymServer {
   }
 
   async run() {
-    // Start the MCP server with stdio transport for backward compatibility
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    
-    // Setup Express routes
+    // Setup Express routes without stdio transport
     this.setupExpressRoutes();
-    const port = parseInt(process.env.PORT || '3000', 10);
+    const port = parseInt(process.env.PORT || '3022', 10);
     
     // Check if SSL certificates are available
     const sslKeyPath = process.env.SSL_KEY_PATH;
