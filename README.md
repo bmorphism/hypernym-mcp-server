@@ -236,4 +236,4 @@ When using the `analyze_text` tool, you'll receive a JSON response like:
 }
 ```
 
-For more information on the Hypernym API or to obtain an API key, contact the Hypernym team at [this link here](https://forms.gle/1CBrdeBVEVC5KJAX6)
+For more information on the Hypernym API or to obtain an API key, contact the Hypernym team at [this link here!](https://forms.gle/1CBrdeBVEVC5KJAX6)
