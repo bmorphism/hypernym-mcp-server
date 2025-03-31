@@ -10,6 +10,8 @@ Hypernym AI offers advanced semantic analysis tools that can:
 - Provide similarity scoring for content density
 - Extract key details from complex text
 
+#### Signup
+
 Learn more about how Hypernym helps your agents to stop losing context and overpaying for it at our [Documentation](https://www.hypernym.ai/docs/api)
 
 And sign up for our API waitlist (self serve coming soon!) at the [link here!](https://forms.gle/1CBrdeBVEVC5KJAX6)
