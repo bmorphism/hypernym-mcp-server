@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "hypernym": {
+      "type": "stdio",
+      "command": "cd /Users/fieldempress/Desktop/source/hypernym/hypernym-mcp-server && /opt/homebrew/bin/npm run start:stdio",
+      "description": "Hypernym semantic analysis and compression tool",
+      "tools": ["analyze_text", "semantic_compression"]
+    }
+  }
+}
